@@ -56,6 +56,11 @@ def register():
                     (name, email, hashed_password, role)
                 )
                 connection.commit()
+                
+                # Debug: Get the new user's ID and print it
+                new_user_id = cursor.lastrowid
+                print(f"Created new user with ID: {new_user_id}")
+                
                 flash('Registration successful! Please login.')
                 return redirect(url_for('login'))
             except Error as e:
@@ -101,6 +106,8 @@ def login():
                     session['name'] = user['Name']
                     session['email'] = user['Email']
                     session['role'] = user['Role']
+                    
+                    print(f"User logged in with ID: {session['user_id']}")  # Debug statement
                     
                     if user['Role'] == 'Admin':
                         return redirect(url_for('admin_dashboard'))
@@ -283,16 +290,81 @@ def search_flights():
     
     return render_template('search.html', search=False)
 
+# Route for selecting return flight - needed to fix the BuildError
+@app.route('/select_return_flight/<int:outbound_flight_id>', methods=['GET', 'POST'])
+def select_return_flight(outbound_flight_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
+    connection = create_connection()
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Get outbound flight details
+            cursor.execute("""
+                SELECT f.*, a.Model, a.Capacity
+                FROM Flight f
+                LEFT JOIN Aircraft a ON f.AircraftID = a.AircraftID
+                WHERE f.FlightID = %s
+            """, (outbound_flight_id,))
+            outbound_flight = cursor.fetchone()
+            
+            if not outbound_flight:
+                flash('Outbound flight not found')
+                return redirect(url_for('search_flights'))
+                
+            # Search for return flights
+            query = """
+                SELECT f.*, a.Model, a.Capacity, 
+                (SELECT COUNT(*) FROM Ticket WHERE FlightID = f.FlightID AND Status = 'Booked') as BookedSeats
+                FROM Flight f
+                LEFT JOIN Aircraft a ON f.AircraftID = a.AircraftID
+                WHERE f.Source = %s AND f.Destination = %s AND f.DepartureTime > %s
+            """
+            
+            # Get return flights (from destination to source)
+            cursor.execute(query, (outbound_flight['Destination'], outbound_flight['Source'], outbound_flight['ArrivalTime']))
+            return_flights = cursor.fetchall()
+            
+            if request.method == 'POST' and 'return_flight_id' in request.form:
+                return_flight_id = request.form['return_flight_id']
+                return redirect(url_for('book_round_trip', 
+                                        outbound_flight_id=outbound_flight_id,
+                                        return_flight_id=return_flight_id))
+            
+            return render_template('select_return_flight.html', 
+                                outbound_flight=outbound_flight,
+                                return_flights=return_flights)
+        except Error as e:
+            flash(f"Error: {e}")
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+                
+    return redirect(url_for('search_flights'))
+
 # Route for booking a flight
 @app.route('/book/<int:flight_id>', methods=['GET', 'POST'])
 def book_flight(flight_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Debug: Print the user_id to check if it's valid
+    print(f"Current user_id in session: {session['user_id']}")
+    
     connection = create_connection()
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
+            
+            # Verify that this user_id exists in the database
+            cursor.execute("SELECT * FROM User WHERE UserID = %s", (session['user_id'],))
+            user = cursor.fetchone()
+            if not user:
+                flash(f"User with ID {session['user_id']} does not exist in the database")
+                return redirect(url_for('login'))
             
             # Get flight details
             cursor.execute("""
@@ -328,36 +400,44 @@ def book_flight(flight_id):
                 
                 base_price = 100.00 if flight['BookedSeats'] < flight['Capacity'] * 0.5 else 150.00
                 
-                for i, traveler in enumerate(travelers):
-                    passenger_info = json.dumps({
-                        'first_name': traveler['first_name'],
-                        'last_name': traveler['last_name'],
-                        'gender': traveler['gender'],
-                        'age': traveler['age'],
-                        'ff_airline': traveler['ff_airline'],
-                        'ff_number': traveler['ff_number'],
-                        'wheelchair': traveler['wheelchair']
-                    })
+                try:
+                    for i, traveler in enumerate(travelers):
+                        passenger_info = json.dumps({
+                            'first_name': traveler['first_name'],
+                            'last_name': traveler['last_name'],
+                            'gender': traveler['gender'],
+                            'age': traveler['age'],
+                            'ff_airline': traveler['ff_airline'],
+                            'ff_number': traveler['ff_number'],
+                            'wheelchair': traveler['wheelchair']
+                        })
+                        
+                        current_booked = flight['BookedSeats'] + i
+                        seat_row = chr(65 + (current_booked // 6))
+                        seat_col = (current_booked % 6) + 1
+                        seat_number = f"{seat_row}{seat_col}"
+                        
+                        # Use 'One Way' instead of 'one_way' for TripType
+                        cursor.execute(
+                            "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'One Way')",
+                            (user_id, flight_id, base_price, seat_number, passenger_info)
+                        )
+                        ticket_id = cursor.lastrowid
+                        
+                        cursor.execute(
+                            "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
+                            (ticket_id, base_price)
+                        )
                     
-                    current_booked = flight['BookedSeats'] + i
-                    seat_row = chr(65 + (current_booked // 6))
-                    seat_col = (current_booked % 6) + 1
-                    seat_number = f"{seat_row}{seat_col}"
-                    
-                    cursor.execute(
-                        "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'one_way')",
-                        (user_id, flight_id, base_price, seat_number, passenger_info)
-                    )
-                    ticket_id = cursor.lastrowid
-                    
-                    cursor.execute(
-                        "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
-                        (ticket_id, base_price)
-                    )
-                
-                connection.commit()
-                flash('Flight booked successfully!')
-                return redirect(url_for('dashboard'))
+                    connection.commit()
+                    flash('Flight booked successfully!')
+                    return redirect(url_for('dashboard'))
+                except Error as e:
+                    connection.rollback()
+                    if "foreign key constraint fails" in str(e).lower():
+                        flash(f"Booking failed: There was an issue with the user account. Please try logging in again.")
+                    else:
+                        flash(f"Booking failed: {e}")
             
             return render_template('booking.html', flight=flight)
         except Error as e:
@@ -375,10 +455,20 @@ def book_round_trip(outbound_flight_id, return_flight_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Debug: Print the user_id to check if it's valid
+    print(f"Current user_id in session: {session['user_id']}")
+    
     connection = create_connection()
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
+            
+            # Verify that this user_id exists in the database
+            cursor.execute("SELECT * FROM User WHERE UserID = %s", (session['user_id'],))
+            user = cursor.fetchone()
+            if not user:
+                flash(f"User with ID {session['user_id']} does not exist in the database")
+                return redirect(url_for('login'))
             
             # Get outbound flight details
             cursor.execute("""
@@ -427,54 +517,63 @@ def book_round_trip(outbound_flight_id, return_flight_id):
                 outbound_base_price = 100.00 if outbound_flight['BookedSeats'] < outbound_flight['Capacity'] * 0.5 else 150.00
                 return_base_price = 100.00 if return_flight['BookedSeats'] < return_flight['Capacity'] * 0.5 else 150.00
                 
-                for i, traveler in enumerate(travelers):
-                    passenger_info = json.dumps({
-                        'first_name': traveler['first_name'],
-                        'last_name': traveler['last_name'],
-                        'gender': traveler['gender'],
-                        'age': traveler['age'],
-                        'ff_airline': traveler['ff_airline'],
-                        'ff_number': traveler['ff_number'],
-                        'wheelchair': traveler['wheelchair']
-                    })
+                try:
+                    for i, traveler in enumerate(travelers):
+                        passenger_info = json.dumps({
+                            'first_name': traveler['first_name'],
+                            'last_name': traveler['last_name'],
+                            'gender': traveler['gender'],
+                            'age': traveler['age'],
+                            'ff_airline': traveler['ff_airline'],
+                            'ff_number': traveler['ff_number'],
+                            'wheelchair': traveler['wheelchair']
+                        })
+                        
+                        # Outbound flight
+                        current_booked = outbound_flight['BookedSeats'] + i
+                        seat_row = chr(65 + (current_booked // 6))
+                        seat_col = (current_booked % 6) + 1
+                        seat_number = f"{seat_row}{seat_col}"
+                        
+                        # Use 'Round Trip' instead of 'round_trip' for TripType
+                        cursor.execute(
+                            "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'Round Trip')",
+                            (user_id, outbound_flight_id, outbound_base_price, seat_number, passenger_info)
+                        )
+                        ticket_id = cursor.lastrowid
+                        
+                        cursor.execute(
+                            "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
+                            (ticket_id, outbound_base_price)
+                        )
+                        
+                        # Return flight
+                        current_booked = return_flight['BookedSeats'] + i
+                        seat_row = chr(65 + (current_booked // 6))
+                        seat_col = (current_booked % 6) + 1
+                        seat_number = f"{seat_row}{seat_col}"
+                        
+                        # Use 'Round Trip' instead of 'round_trip' for TripType
+                        cursor.execute(
+                            "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'Round Trip')",
+                            (user_id, return_flight_id, return_base_price, seat_number, passenger_info)
+                        )
+                        ticket_id = cursor.lastrowid
+                        
+                        cursor.execute(
+                            "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
+                            (ticket_id, return_base_price)
+                        )
                     
-                    # Outbound flight
-                    current_booked = outbound_flight['BookedSeats'] + i
-                    seat_row = chr(65 + (current_booked // 6))
-                    seat_col = (current_booked % 6) + 1
-                    seat_number = f"{seat_row}{seat_col}"
-                    
-                    cursor.execute(
-                        "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'round_trip')",
-                        (user_id, outbound_flight_id, outbound_base_price, seat_number, passenger_info)
-                    )
-                    ticket_id = cursor.lastrowid
-                    
-                    cursor.execute(
-                        "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
-                        (ticket_id, outbound_base_price)
-                    )
-                    
-                    # Return flight
-                    current_booked = return_flight['BookedSeats'] + i
-                    seat_row = chr(65 + (current_booked // 6))
-                    seat_col = (current_booked % 6) + 1
-                    seat_number = f"{seat_row}{seat_col}"
-                    
-                    cursor.execute(
-                        "INSERT INTO Ticket (PassengerID, FlightID, Price, SeatNumber, Status, PassengerInfo, TripType) VALUES (%s, %s, %s, %s, 'Booked', %s, 'round_trip')",
-                        (user_id, return_flight_id, return_base_price, seat_number, passenger_info)
-                    )
-                    ticket_id = cursor.lastrowid
-                    
-                    cursor.execute(
-                        "INSERT INTO Payment (TicketID, Amount, Status) VALUES (%s, %s, 'Completed')",
-                        (ticket_id, return_base_price)
-                    )
-                
-                connection.commit()
-                flash('Round trip booked successfully!')
-                return redirect(url_for('dashboard'))
+                    connection.commit()
+                    flash('Round trip booked successfully!')
+                    return redirect(url_for('dashboard'))
+                except Error as e:
+                    connection.rollback()
+                    if "foreign key constraint fails" in str(e).lower():
+                        flash(f"Booking failed: There was an issue with the user account. Please try logging in again.")
+                    else:
+                        flash(f"Booking failed: {e}")
             
             return render_template('booking.html', 
                                 flight=outbound_flight,
