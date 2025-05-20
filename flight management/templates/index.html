@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Add some styles for the trip type selection */
+        .trip-type {
+            display: flex;
+            margin-bottom: 15px;
+            gap: 20px;
+        }
+        .trip-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .trip-option input {
+            margin-right: 5px;
+        }
+        #return_date_container {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">SkyWay Airlines</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('search_flights') }}">Flights</a></li>
+                {% if 'user_id' in session %}
+                    <li><a href="{{ url_for('dashboard') }}">My Bookings</a></li>
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Explore the World with SkyWay</h1>
+            <p>Discover amazing destinations and book your next adventure with our easy-to-use flight booking system.</p>
+            <a href="{{ url_for('search_flights') }}" class="btn">Search Flights</a>
+        </div>
+    </section>
+
+    <!-- Search Box -->
+    <div class="container">
+        <div class="search-box">
+            <form id="flight-search-form" action="{{ url_for('search_flights') }}" method="post" class="search-form">
+                <div class="trip-type">
+                    <div class="trip-option">
+                        <input type="radio" id="one_way" name="trip_type" value="one_way" checked>
+                        <label for="one_way">One Way</label>
+                    </div>
+                    <div class="trip-option">
+                        <input type="radio" id="round_trip" name="trip_type" value="round_trip">
+                        <label for="round_trip">Round Trip</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="source">From</label>
+                    <input type="text" id="source" name="source" class="form-control" placeholder="City or Airport" required>
+                </div>
+                <div class="form-group">
+                    <label for="destination">To</label>
+                    <input type="text" id="destination" name="destination" class="form-control" placeholder="City or Airport" required>
+                </div>
+                <div class="form-group">
+                    <label for="departure_date">Departure Date</label>
+                    <input type="date" id="departure_date" name="departure_date" class="form-control" required>
+                </div>
+                <div class="form-group" id="return_date_container" style="opacity: 0.5; pointer-events: none;">
+                    <label for="return_date">Return Date</label>
+                    <input type="date" id="return_date" name="return_date" class="form-control">
+                </div>
+                <button type="submit" class="btn">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose SkyWay?</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-plane"></i>
+                    </div>
+                    <h3 class="feature-title">Wide Selection</h3>
+                    <p>Choose from thousands of flights to destinations worldwide.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h3 class="feature-title">Best Prices</h3>
+                    <p>Get competitive prices and special offers on flights.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3 class="feature-title">24/7 Support</h3>
+                    <p>Our customer service team is always ready to help you.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Your trusted partner for safe and comfortable flights across the globe.</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('search_flights') }}">Search Flights</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Contact</h3>
+                    <p>Email: info@skyway.com</p>
+                    <p>Phone: +1 234 567 890</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Enable/disable return date field based on trip type selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const oneWayRadio = document.getElementById('one_way');
+            const roundTripRadio = document.getElementById('round_trip');
+            const returnDateContainer = document.getElementById('return_date_container');
+            const returnDateInput = document.getElementById('return_date');
+            
+            function updateReturnDateVisibility() {
+                if (roundTripRadio.checked) {
+                    returnDateContainer.style.opacity = '1';
+                    returnDateContainer.style.pointerEvents = 'auto';
+                    returnDateInput.setAttribute('required', 'required');
+                } else {
+                    returnDateContainer.style.opacity = '0.5';
+                    returnDateContainer.style.pointerEvents = 'none';
+                    returnDateInput.removeAttribute('required');
+                }
+            }
+            
+            oneWayRadio.addEventListener('change', updateReturnDateVisibility);
+            roundTripRadio.addEventListener('change', updateReturnDateVisibility);
+            
+            // Set minimum dates for departure and return
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const formatDate = date => {
+                return date.toISOString().split('T')[0];
+            };
+            
+            const departureInput = document.getElementById('departure_date');
+            departureInput.min = formatDate(today);
+            departureInput.value = formatDate(today);
+            
+            returnDateInput.min = formatDate(tomorrow);
+            returnDateInput.value = formatDate(tomorrow);
+            
+            // Update return date min value when departure date changes
+            departureInput.addEventListener('change', function() {
+                const selectedDeparture = new Date(this.value);
+                const nextDay = new Date(selectedDeparture);
+                nextDay.setDate(nextDay.getDate() + 1);
+                returnDateInput.min = formatDate(nextDay);
+                
+                // If return date is before departure date, update it
+                if(new Date(returnDateInput.value) <= selectedDeparture) {
+                    returnDateInput.value = formatDate(nextDay);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .delay-notification {
+            background-color: #ffe8e6;
+            border: 1px solid #ffccc7;
+            color: #cf1322;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .delay-notification i {
+            margin-right: 10px;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+        
+        .delay-notification-content {
+            flex: 1;
+        }
+        
+        .delay-notification h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        
+        .delay-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ffccc7;
+        }
+        
+        .book-return {
+            margin-left: 10px;
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        
+        .book-return:hover {
+            background-color: #bae7ff;
+        }
+        
+        .status-delayed {
+            background-color: #fff2e8;
+            color: #d4380d;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">SkyWay Airlines</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('search_flights') }}">Flights</a></li>
+                <li><a href="{{ url_for('dashboard') }}">My Bookings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message flash-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="container">
+        <h1>Welcome, {{ session.name }}!</h1>
+        
+        <!-- Delay Notifications -->
+        {% if delayed_flights %}
+            {% for flight in delayed_flights %}
+                <div class="delay-notification">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="delay-notification-content">
+                        <h4>Flight Delay Notification</h4>
+                        <p>We regret to inform you that your flight from {{ flight.Source }} to {{ flight.Destination }} on {{ flight.DepartureTime.strftime('%Y-%m-%d') }} has been delayed.</p>
+                        
+                        <div class="delay-details">
+                            <p><strong>Flight Details:</strong></p>
+                            <p>Flight ID: {{ flight.FlightID }}</p>
+                            <p>Original Departure: {{ flight.OriginalDepartureTime.strftime('%H:%M') }}</p>
+                            <p>New Departure: {{ flight.DepartureTime.strftime('%H:%M') }}</p>
+                            <p>Expected Delay: {{ flight.DelayMinutes }} minutes</p>
+                        </div>
+                        
+                        <p>We sincerely apologize for any inconvenience this may cause to your travel plans. Our team is working diligently to minimize the impact.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>My Bookings</h2>
+            </div>
+            <div class="card-body">
+                {% if tickets %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Flight</th>
+                                <th>Date</th>
+                                <th>Departure</th>
+                                <th>Arrival</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                                <tr>
+                                    <td>{{ ticket.TicketID }}</td>
+                                    <td>{{ ticket.Source }} to {{ ticket.Destination }}</td>
+                                    <td>{{ ticket.DepartureTime.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ ticket.DepartureTime.strftime('%H:%M') }}</td>
+                                    <td>{{ ticket.ArrivalTime.strftime('%H:%M') }}</td>
+                                    <td>${{ ticket.Price }}</td>
+                                    <td>
+                                        {% if ticket.Status == 'Delayed' %}
+                                            <span class="status-delayed">{{ ticket.Status }}</span>
+                                        {% else %}
+                                            {{ ticket.Status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ticket.TripType == 'one_way' %}
+                                            <a href="{{ url_for('search_flights', source=ticket.Destination, destination=ticket.Source, return_flight=true) }}" class="book-return">
+                                                <i class="fas fa-undo"></i> Book Return
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>You don't have any bookings yet. <a href="{{ url_for('search_flights') }}">Search for flights</a> to book your first trip!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Your trusted partner for safe and comfortable flights across the globe.</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('search_flights') }}">Search Flights</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Contact</h3>
+                    <p>Email: info@skyway.com</p>
+                    <p>Phone: +1 234 567 890</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Flight - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">SkyWay Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('add_flight') }}">Add Flight</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message flash-error">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Add Flight Form -->
+    <div class="container">
+        <div class="form-container">
+            <h2 class="form-title">Add New Flight</h2>
+            <form id="add-flight-form" action="{{ url_for('add_flight') }}" method="post">
+                <div class="form-group">
+                    <label for="source">Source</label>
+                    <input type="text" id="source" name="source" class="form-control" placeholder="City or Airport" required>
+                </div>
+                <div class="form-group">
+                    <label for="destination">Destination</label>
+                    <input type="text" id="destination" name="destination" class="form-control" placeholder="City or Airport" required>
+                </div>
+                <div class="form-group">
+                    <label for="departure_time">Departure Time</label>
+                    <input type="datetime-local" id="departure_time" name="departure_time" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="arrival_time">Arrival Time</label>
+                    <input type="datetime-local" id="arrival_time" name="arrival_time" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="aircraft_id">Aircraft</label>
+                    <select id="aircraft_id" name="aircraft_id" class="form-control" required>
+                        <option value="">Select an aircraft</option>
+                        {% for plane in aircraft %}
+                            <option value="{{ plane.AircraftID }}">{{ plane.Model }} (Capacity: {{ plane.Capacity }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-block">Add Flight</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Admin Dashboard</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('add_flight') }}">Add Flight</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

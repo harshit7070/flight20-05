@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Flight - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .traveler-container {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .traveler-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        .gender-select {
+            display: flex;
+            gap: 10px;
+        }
+        .gender-option {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .gender-option.selected {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .frequent-flyer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+        }
+        .frequent-flyer-toggle {
+            cursor: pointer;
+            color: #3498db;
+            display: flex;
+            align-items: center;
+        }
+        .frequent-flyer-toggle i {
+            margin-left: 5px;
+            transition: transform 0.3s;
+        }
+        .frequent-flyer-toggle.open i {
+            transform: rotate(180deg);
+        }
+        .frequent-flyer-fields {
+            display: none;
+            margin-top: 15px;
+        }
+        .frequent-flyer-fields.show {
+            display: block;
+        }
+        .add-traveler-btn {
+            background-color: #f5f5f5;
+            border: 1px dashed #999;
+            color: #555;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .add-traveler-btn i {
+            margin-right: 8px;
+        }
+        .info-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .wheelchair-option {
+            margin-top: 15px;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-container input {
+            margin-right: 10px;
+        }
+        .flight-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .flight-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .trip-type-selection {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .trip-option {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .trip-option.selected {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .return-flight-section {
+            margin-top: 30px;
+            border-top: 1px dashed #ccc;
+            padding-top: 20px;
+        }
+        .delay-notification {
+            background-color: #ffe8e6;
+            border: 1px solid #ffccc7;
+            color: #cf1322;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .delay-notification i {
+            margin-right: 10px;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+        .delay-notification-content {
+            flex: 1;
+        }
+        .delay-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ffccc7;
+        }
+        .flight-badge {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .return-flight-badge {
+            background-color: #f6ffed;
+            color: #52c41a;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">SkyWay Airlines</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('search_flights') }}">Flights</a></li>
+                <li><a href="{{ url_for('dashboard') }}">My Bookings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message flash-error">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Booking Form -->
+    <div class="container">
+        <div class="form-container" style="max-width: 800px;">
+            <h2 class="form-title">Book Your Flight</h2>
+
+            <!-- Displays delay notification if applicable -->
+            {% if flight.Status == 'Delayed' %}
+                <div class="delay-notification">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="delay-notification-content">
+                        <h4>Flight Delay Notification</h4>
+                        <p>We regret to inform you that this flight from {{ flight.Source }} to {{ flight.Destination }} has been delayed.</p>
+                        
+                        <div class="delay-details">
+                            <p><strong>Flight Details:</strong></p>
+                            <p><strong>Original Departure:</strong> {{ flight.OriginalDepartureTime.strftime('%H:%M') }}</p>
+                            <p><strong>New Departure:</strong> {{ flight.DepartureTime.strftime('%H:%M') }}</p>
+                            <p><strong>Expected Delay:</strong> {{ flight.DelayMinutes }} minutes</p>
+                        </div>
+                        
+                        <p>We sincerely apologize for any inconvenience this may cause to your travel plans. Our team is working diligently to minimize the impact.</p>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Trip Type Selection (one-way or round-trip) -->
+            {% if return_flight_id %}
+                <div class="trip-type-selection">
+                    <div class="trip-option selected" id="trip-one-way">
+                        <i class="fas fa-long-arrow-alt-right"></i> Round-Trip
+                    </div>
+                </div>
+            {% else %}
+                <div class="trip-type-selection">
+                    <div class="trip-option selected" id="trip-one-way">
+                        <i class="fas fa-long-arrow-alt-right"></i> One-Way
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Outbound Flight Details -->
+            <div class="card" style="margin-bottom: 30px;">
+                <div class="card-header">
+                    <h3>
+                        {% if return_flight_id %}
+                            <span class="flight-badge">Outbound</span>
+                        {% endif %}
+                        Flight Details
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <div>
+                            <h4>{{ flight.Source }} to {{ flight.Destination }}</h4>
+                            <p><strong>Date:</strong> {{ flight.DepartureTime.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p><strong>Departure:</strong> {{ flight.DepartureTime.strftime('%H:%M') }}</p>
+                            <p><strong>Arrival:</strong> {{ flight.ArrivalTime.strftime('%H:%M') }}</p>
+                        </div>
+                    </div>
+                    <p><strong>Aircraft:</strong> {{ flight.Model }}</p>
+                    <p><strong>Available Seats:</strong> {{ flight.Capacity - flight.BookedSeats }}</p>
+                </div>
+            </div>
+            
+            <!-- Return Flight Details (if applicable) -->
+            {% if return_flight_id %}
+                <div class="card" style="margin-bottom: 30px;">
+                    <div class="card-header">
+                        <h3><span class="flight-badge return-flight-badge">Return</span> Flight Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                            <div>
+                                <h4>{{ return_flight.Destination }} to {{ return_flight.Source }}</h4>
+                                <p><strong>Date:</strong> {{ return_flight.DepartureTime.strftime('%Y-%m-%d') }}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p><strong>Departure:</strong> {{ return_flight.DepartureTime.strftime('%H:%M') }}</p>
+                                <p><strong>Arrival:</strong> {{ return_flight.ArrivalTime.strftime('%H:%M') }}</p>
+                            </div>
+                        </div>
+                        <p><strong>Aircraft:</strong> {{ return_flight.Model }}</p>
+                        <p><strong>Available Seats:</strong> {{ return_flight.Capacity - return_flight.BookedSeats }}</p>
+                        {% if return_flight.Status == 'Delayed' %}
+                            <div class="delay-notification">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <div class="delay-notification-content">
+                                    <h4>Return Flight Delay Notification</h4>
+                                    <p>We regret to inform you that your return flight has been delayed.</p>
+                                    
+                                    <div class="delay-details">
+                                        <p><strong>Original Departure:</strong> {{ return_flight.OriginalDepartureTime.strftime('%H:%M') }}</p>
+                                        <p><strong>New Departure:</strong> {{ return_flight.DepartureTime.strftime('%H:%M') }}</p>
+                                        <p><strong>Expected Delay:</strong> {{ return_flight.DelayMinutes }} minutes</p>
+                                    </div>
+                                    
+                                    <p>We sincerely apologize for any inconvenience this may cause to your travel plans.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Booking Form -->
+            {% if return_flight_id %}
+                <form id="booking-form" action="{{ url_for('book_round_trip', outbound_flight_id=flight.FlightID, return_flight_id=return_flight_id) }}" method="post">
+                    <input type="hidden" name="trip_type" value="round_trip">
+            {% else %}
+                <form id="booking-form" action="{{ url_for('book_flight', flight_id=flight.FlightID) }}" method="post">
+                    <input type="hidden" name="trip_type" value="one_way">
+            {% endif %}
+                <h3>Traveller Details</h3>
+                
+                <div class="info-box">
+                    <strong>Important:</strong> Enter your name as it is mentioned on your passport. Passport should be valid for minimum 6 months from the date of travel. 
+                    Please ensure that the Frequent Flyer No entered here is against the same passenger name otherwise the points will not be updated by the airline.
+                </div>
+                
+                <div id="travelers-container">
+                    <div class="traveler-container" id="traveler-1">
+                        <div class="traveler-header">
+                            <h4>ADULT 1</h4>
+                            <div>1/1 added</div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="first_name_1">First & Middle Name</label>
+                                <input type="text" id="first_name_1" name="travelers[0][first_name]" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="last_name_1">Last Name</label>
+                                <input type="text" id="last_name_1" name="travelers[0][last_name]" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <div class="gender-select">
+                                <div class="gender-option" data-value="Male" onclick="selectGender(this, 0)">MALE</div>
+                                <div class="gender-option" data-value="Female" onclick="selectGender(this, 0)">FEMALE</div>
+                            </div>
+                            <input type="hidden" name="travelers[0][gender]" id="gender_1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="age_1">Age</label>
+                            <input type="number" id="age_1" name="travelers[0][age]" class="form-control" min="1" required>
+                        </div>
+                        
+                        <div class="frequent-flyer">
+                            <div class="frequent-flyer-toggle" onclick="toggleFrequentFlyer(1)">
+                                Frequent Flyer Number <span>(Avail extra benefits & earn points)</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            
+                            <div class="frequent-flyer-fields" id="ff-fields-1">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="ff_airline_1">Frequent Flyer Airline</label>
+                                        <select id="ff_airline_1" name="travelers[0][ff_airline]" class="form-control">
+                                            <option value="">Select Airline</option>
+                                            <option value="SkyWay Miles">SkyWay Miles</option>
+                                            <option value="Star Alliance">Star Alliance</option>
+                                            <option value="OneWorld">OneWorld</option>
+                                            <option value="SkyTeam">SkyTeam</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="ff_number_1">Frequent Flyer No</label>
+                                        <input type="text" id="ff_number_1" name="travelers[0][ff_number]" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="wheelchair-option">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="wheelchair_1" name="travelers[0][wheelchair]">
+                                <label for="wheelchair_1">I require wheelchair (Optional)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="add-traveler-btn" id="add-traveler-btn">
+                    <i class="fas fa-plus"></i> ADD NEW ADULT
+                </div>
+                
+                <div class="form-group">
+                    <label for="price">Total Price</label>
+                    <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="total_price" 
+                         data-base-price="{{ '100' if flight.BookedSeats < flight.Capacity * 0.5 else '150' }}"
+                         data-return-price="{{ '100' if return_flight_id and return_flight.BookedSeats < return_flight.Capacity * 0.5 else '150' if return_flight_id else '0' }}">
+                        {% if return_flight_id %}
+                            {% set outbound_price = 100 if flight.BookedSeats < flight.Capacity * 0.5 else 150 %}
+                            {% set return_price = 100 if return_flight.BookedSeats < return_flight.Capacity * 0.5 else 150 %}
+                            ${{ outbound_price + return_price }}
+                        {% else %}
+                            ${{ '100' if flight.BookedSeats < flight.Capacity * 0.5 else '150' }}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="terms">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        I agree to the <a href="{{ url_for('terms_and_conditions') }}" target="_blank">terms and conditions</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-block">Confirm Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Your trusted partner for safe and comfortable flights across the globe.</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('search_flights') }}">Search Flights</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Contact</h3>
+                    <p>Email: info@skyway.com</p>
+                    <p>Phone: +1 234 567 890</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // JavaScript for the traveler details form
+        let travelerCount = 1;
+        const maxTravelers = 9;
+        
+        // Function to select gender
+        function selectGender(element, travelerIndex) {
+            const container = element.closest('.gender-select');
+            const options = container.querySelectorAll('.gender-option');
+            const hiddenInput = document.getElementById('gender_' + (travelerIndex + 1));
+            
+            options.forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            hiddenInput.value = element.getAttribute('data-value');
+        }
+        
+        // Function to toggle frequent flyer fields
+        function toggleFrequentFlyer(index) {
+            const toggle = document.querySelector(`#traveler-${index} .frequent-flyer-toggle`);
+            const fields = document.getElementById(`ff-fields-${index}`);
+            
+            toggle.classList.toggle('open');
+            fields.classList.toggle('show');
+        }
+        
+        // Function to add a new traveler
+        document.getElementById('add-traveler-btn').addEventListener('click', function() {
+            if (travelerCount >= maxTravelers) {
+                alert('Maximum 9 travelers allowed per booking');
+                return;
+            }
+            
+            travelerCount++;
+            
+            const container = document.getElementById('travelers-container');
+            const newTraveler = document.createElement('div');
+            newTraveler.className = 'traveler-container';
+            newTraveler.id = `traveler-${travelerCount}`;
+            
+            newTraveler.innerHTML = `
+                <div class="traveler-header">
+                    <h4>ADULT ${travelerCount}</h4>
+                    <div>${travelerCount}/${travelerCount} added</div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name_${travelerCount}">First & Middle Name</label>
+                        <input type="text" id="first_name_${travelerCount}" name="travelers[${travelerCount-1}][first_name]" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name_${travelerCount}">Last Name</label>
+                        <input type="text" id="last_name_${travelerCount}" name="travelers[${travelerCount-1}][last_name]" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Gender</label>
+                    <div class="gender-select">
+                        <div class="gender-option" data-value="Male" onclick="selectGender(this, ${travelerCount-1})">MALE</div>
+                        <div class="gender-option" data-value="Female" onclick="selectGender(this, ${travelerCount-1})">FEMALE</div>
+                    </div>
+                    <input type="hidden" name="travelers[${travelerCount-1}][gender]" id="gender_${travelerCount}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="age_${travelerCount}">Age</label>
+                    <input type="number" id="age_${travelerCount}" name="travelers[${travelerCount-1}][age]" class="form-control" min="1" required>
+                </div>
+                
+                <div class="frequent-flyer">
+                    <div class="frequent-flyer-toggle" onclick="toggleFrequentFlyer(${travelerCount})">
+                        Frequent Flyer Number <span>(Avail extra benefits & earn points)</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    
+                    <div class="frequent-flyer-fields" id="ff-fields-${travelerCount}">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ff_airline_${travelerCount}">Frequent Flyer Airline</label>
+                                <select id="ff_airline_${travelerCount}" name="travelers[${travelerCount-1}][ff_airline]" class="form-control">
+                                    <option value="">Select Airline</option>
+                                    <option value="SkyWay Miles">SkyWay Miles</option>
+                                    <option value="Star Alliance">Star Alliance</option>
+                                    <option value="OneWorld">OneWorld</option>
+                                    <option value="SkyTeam">SkyTeam</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="ff_number_${travelerCount}">Frequent Flyer No</label>
+                                <input type="text" id="ff_number_${travelerCount}" name="travelers[${travelerCount-1}][ff_number]" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="wheelchair-option">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="wheelchair_${travelerCount}" name="travelers[${travelerCount-1}][wheelchair]">
+                        <label for="wheelchair_${travelerCount}">I require wheelchair (Optional)</label>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newTraveler);
+            
+            // Update price calculation for both one-way and round trip
+            updateTotalPrice();
+        });
+
+        // Function to update total price
+        function updateTotalPrice() {
+            const basePrice = parseFloat(document.getElementById('total_price').getAttribute('data-base-price'));
+            const returnPrice = parseFloat(document.getElementById('total_price').getAttribute('data-return-price') || 0);
+            const totalPrice = (basePrice + returnPrice) * travelerCount;
+            document.getElementById('total_price').textContent = '$' + totalPrice;
+        }
+
+        // Initialize price calculation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select first gender option by default
+            const firstGenderOption = document.querySelector('#traveler-1 .gender-option');
+            if (firstGenderOption) {
+                selectGender(firstGenderOption, 0);
+            }
+        });
+    </script>
+</body>
+</html>

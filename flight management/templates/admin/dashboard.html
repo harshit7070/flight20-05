@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #3498db;
+            margin: 10px 0;
+        }
+        
+        .admin-actions {
+            margin: 20px 0;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+{% if delayed_flights %}
+    <div class="flash-message flash-error">
+        <strong>Attention!</strong> The following flights are delayed:
+        <ul>
+            {% for flight in delayed_flights %}
+                <li>{{ flight.Source }} to {{ flight.Destination }} - Delayed</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">SkyWay Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('add_flight') }}">Add Flight</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message flash-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Content -->
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <p>Welcome, {{ session.name }}!</p>
+        
+        <!-- Stats Overview -->
+        <div class="admin-stats">
+            <div class="stat-card">
+                <h3>Total Flights</h3>
+                <div class="stat-number">{{ flights|length }}</div>
+                <p>Active flights in the system</p>
+            </div>
+            <div class="stat-card">
+                <h3>Aircraft</h3>
+                <div class="stat-number">{{ aircraft|length }}</div>
+                <p>Available aircraft</p>
+            </div>
+            <div class="stat-card">
+                <h3>Occupancy Rate</h3>
+                <div class="stat-number">
+                    {% if flights|length > 0 %}
+                        {% set total_capacity = 0 %}
+                        {% set total_booked = 0 %}
+                        {% for flight in flights %}
+                            {% set total_capacity = total_capacity + flight.Capacity %}
+                            {% set total_booked = total_booked + flight.BookedSeats %}
+                        {% endfor %}
+                        {{ ((total_booked / total_capacity) * 100)|round|int if total_capacity > 0 else 0 }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+                <p>Average flight occupancy</p>
+            </div>
+        </div>
+        
+        <!-- Admin Actions -->
+        <div class="admin-actions">
+            <a href="{{ url_for('add_flight') }}" class="btn">Add New Flight</a>
+        </div>
+        
+        <!-- Flights Management -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Manage Flights</h2>
+            </div>
+            <div class="card-body">
+                {% if flights %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Route</th>
+                                <th>Departure</th>
+                                <th>Arrival</th>
+                                <th>Aircraft</th>
+                                <th>Occupancy</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for flight in flights %}
+                                <tr>
+                                    <td>{{ flight.FlightID }}</td>
+                                    <td>{{ flight.Source }} to {{ flight.Destination }}</td>
+                                    <td>{{ flight.DepartureTime.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>{{ flight.ArrivalTime.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>{{ flight.Model }}</td>
+                                    <td>{{ flight.BookedSeats }}/{{ flight.Capacity }}</td>
+                                    <td>
+                                        <a href="#" class="btn" style="padding: 5px 10px; font-size: 14px;">Edit</a>
+                                        <a href="#" class="btn" style="padding: 5px 10px; font-size: 14px; background-color: #e74c3c;">Delete</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No flights available. <a href="{{ url_for('add_flight') }}">Add a new flight</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Aircraft Management -->
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-header">
+                <h2>Aircraft Status</h2>
+            </div>
+            <div class="card-body">
+                {% if aircraft %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Model</th>
+                                <th>Capacity</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plane in aircraft %}
+                                <tr>
+                                    <td>{{ plane.AircraftID }}</td>
+                                    <td>{{ plane.Model }}</td>
+                                    <td>{{ plane.Capacity }}</td>
+                                    <td>
+                                        <span style="color: {% if plane.MaintenanceStatus == 'Operational' %}green{% else %}red{% endif %};">
+                                            {{ plane.MaintenanceStatus }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn" style="padding: 5px 10px; font-size: 14px;">Edit</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No aircraft available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Admin Dashboard</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('add_flight') }}">Add Flight</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

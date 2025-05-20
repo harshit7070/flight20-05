@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms and Conditions - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .terms-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        .terms-section {
+            margin-bottom: 30px;
+        }
+        
+        .terms-section h3 {
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .terms-section p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .terms-section ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .terms-section li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">SkyWay Airlines</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('search_flights') }}">Flights</a></li>
+                {% if 'user_id' in session %}
+                <li><a href="{{ url_for('dashboard') }}">My Bookings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                <li><a href="{{ url_for('login') }}">Login</a></li>
+                <li><a href="{{ url_for('register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Terms and Conditions Content -->
+    <div class="container">
+        <div class="terms-container">
+            <h2 class="form-title">Terms and Conditions</h2>
+            
+            <div class="terms-section">
+                <h3>1. Booking and Ticketing</h3>
+                <p>By completing the booking process with SkyWay Airlines ("we", "us", "our"), you acknowledge and agree to the following terms and conditions:</p>
+                <ul>
+                    <li>The passenger's name on the booking must match the name on the government-issued ID that will be presented at check-in.</li>
+                    <li>A confirmed booking is subject to the passenger providing valid identification documents at the time of check-in.</li>
+                    <li>E-tickets are non-transferable and can only be used by the passenger named on the ticket.</li>
+                    <li>The passenger is responsible for ensuring that all information provided during booking is accurate and complete.</li>
+                    <li>Bookings are only confirmed once full payment has been received and processed.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>2. Fare Rules and Payment</h3>
+                <p>All fares are subject to the following conditions:</p>
+                <ul>
+                    <li>All quoted fares are in the specified currency and include all taxes and fees unless otherwise stated.</li>
+                    <li>Fares may vary based on availability, seasonality, and booking conditions.</li>
+                    <li>Payment must be made in full at the time of booking.</li>
+                    <li>We accept major credit cards, debit cards, and other payment methods as specified during the booking process.</li>
+                    <li>Additional charges may apply for certain payment methods.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>3. Changes, Cancellations, and Refunds</h3>
+                <ul>
+                    <li>Changes to bookings may be permitted as per the fare rules of your ticket, and may incur additional fees.</li>
+                    <li>Cancellation fees and refund policies vary depending on the fare type purchased.</li>
+                    <li>Non-refundable tickets will not be refunded in case of cancellation.</li>
+                    <li>Refunds, when applicable, will be processed through the original payment method.</li>
+                    <li>No-shows (failure to check in for your flight without prior cancellation) typically result in forfeiture of the ticket value.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>4. Check-in and Boarding</h3>
+                <ul>
+                    <li>Passengers must check in within the specified time frame before departure.</li>
+                    <li>Online check-in is available from 24 hours up to 1 hour before scheduled departure.</li>
+                    <li>Airport check-in counters close 60 minutes before scheduled departure for domestic flights and 90 minutes for international flights.</li>
+                    <li>Boarding gates close 20 minutes before departure.</li>
+                    <li>Failure to complete check-in and present yourself at the boarding gate on time may result in denied boarding with no refund.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>5. Baggage Allowance</h3>
+                <ul>
+                    <li>Baggage allowances vary based on route, fare type, and membership status.</li>
+                    <li>Checked baggage typically includes 1 piece of up to 23kg (50lbs) for economy class passengers.</li>
+                    <li>Carry-on baggage is limited to 1 piece not exceeding 7kg (15lbs) with maximum dimensions of 55cm x 40cm x 20cm.</li>
+                    <li>Additional or overweight baggage is subject to excess baggage fees.</li>
+                    <li>The airline reserves the right to refuse carriage of dangerous or prohibited items.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>6. Special Assistance</h3>
+                <ul>
+                    <li>Requests for special assistance, including wheelchair assistance, should be made at the time of booking.</li>
+                    <li>Special meal requests must be made at least 24 hours before scheduled departure.</li>
+                    <li>Medical equipment may be carried subject to prior approval and airline policies.</li>
+                    <li>Passengers with reduced mobility are advised to arrive at the airport at least 2 hours before departure.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>7. Liability</h3>
+                <p>Our liability for damage, delay, or loss is limited by applicable international conventions, including:</p>
+                <ul>
+                    <li>The Montreal Convention or the Warsaw Convention, whichever may apply.</li>
+                    <li>For domestic flights, liability may be limited by applicable national law.</li>
+                    <li>The airline is not liable for indirect, consequential, or special damages.</li>
+                    <li>Claims for damaged baggage must be reported within 7 days of receipt; for delayed baggage, within 21 days of delivery.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>8. Privacy Policy</h3>
+                <p>By making a booking, you consent to the collection, processing, use, and transfer of your personal data in accordance with our Privacy Policy, which includes:</p>
+                <ul>
+                    <li>Data collection for processing your booking and providing services.</li>
+                    <li>Transfer of passenger data to relevant immigration and border control authorities.</li>
+                    <li>Use of data for marketing purposes, subject to your consent.</li>
+                    <li>Storage of your data in secure systems with appropriate safeguards.</li>
+                </ul>
+            </div>
+            
+            <div class="terms-section">
+                <h3>9. Governing Law</h3>
+                <p>These terms and conditions shall be governed by and construed in accordance with the laws of the jurisdiction in which SkyWay Airlines is registered, without regard to its conflict of law provisions.</p>
+            </div>
+            
+            <div class="terms-section">
+                <h3>10. Changes to Terms and Conditions</h3>
+                <p>SkyWay Airlines reserves the right to modify these terms and conditions at any time. Changes will be effective immediately upon posting on our website. It is your responsibility to review these terms regularly.</p>
+            </div>
+            
+            
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Your trusted partner for safe and comfortable flights across the globe.</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('search_flights') }}">Search Flights</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Contact</h3>
+                    <p>Email: info@skyway.com</p>
+                    <p>Phone: +1 234 567 890</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

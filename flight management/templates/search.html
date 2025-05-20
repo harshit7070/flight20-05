@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Flights - SkyWay Flight Booking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .flight-tab {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .flight-tab-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .flight-tab-item.active {
+            border-bottom: 3px solid #4CAF50;
+            color: #4CAF50;
+        }
+        .flight-results-container {
+            display: none;
+        }
+        .flight-results-container.active {
+            display: block;
+        }
+        .flight-groups {
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+            margin-bottom: 20px;
+        }
+        .flight-group {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .flight-group-header {
+            background-color: #f5f5f5;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        .return-flight-selection {
+            margin-top: 30px;
+        }
+        .flight-selection-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+            text-decoration: none;
+        }
+        .trip-type {
+            display: flex;
+            margin-bottom: 15px;
+            gap: 20px;
+        }
+        .trip-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .trip-option input {
+            margin-right: 5px;
+        }
+        #return_date_container {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">SkyWay Airlines</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('search_flights') }}">Flights</a></li>
+                {% if 'user_id' in session %}
+                    <li><a href="{{ url_for('dashboard') }}">My Bookings</a></li>
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message flash-error">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="container">
+        <div class="search-box">
+            <h2 style="text-align: center; margin-bottom: 20px;">Search Flights</h2>
+            <form id="flight-search-form" action="{{ url_for('search_flights') }}" method="post" class="search-form">
+                <div class="trip-type">
+                    <div class="trip-option">
+                        <input type="radio" id="one_way" name="trip_type" value="one_way" {% if not return_date %}checked{% endif %}>
+                        <label for="one_way">One Way</label>
+                    </div>
+                    <div class="trip-option">
+                        <input type="radio" id="round_trip" name="trip_type" value="round_trip" {% if return_date %}checked{% endif %}>
+                        <label for="round_trip">Round Trip</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="source">From</label>
+                    <input type="text" id="source" name="source" class="form-control" placeholder="City or Airport" value="{{ source|default('') }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="destination">To</label>
+                    <input type="text" id="destination" name="destination" class="form-control" placeholder="City or Airport" value="{{ destination|default('') }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="departure_date">Departure Date</label>
+                    <input type="date" id="departure_date" name="departure_date" class="form-control" value="{{ departure_date|default('') }}" required>
+                </div>
+                <div class="form-group" id="return_date_container" style="{% if not return_date %}opacity: 0.5; pointer-events: none;{% endif %}">
+                    <label for="return_date">Return Date</label>
+                    <input type="date" id="return_date" name="return_date" class="form-control" value="{{ return_date|default('') }}" {% if return_date %}required{% endif %}>
+                </div>
+                <button type="submit" class="btn">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if search %}
+        <div class="container" style="margin-top: 30px;">
+            <h2>Search Results</h2>
+            
+            {% if trip_type == 'round_trip' %}
+                <!-- Tabs for outbound and return flights -->
+                <div class="flight-tab">
+                    <div class="flight-tab-item active" data-target="outbound">Outbound Flight: {{ source }} to {{ destination }}</div>
+                    <div class="flight-tab-item" data-target="return">Return Flight: {{ destination }} to {{ source }}</div>
+                </div>
+            {% endif %}
+            
+            <!-- Outbound Flights -->
+            <div id="outbound-flights" class="flight-results-container active">
+                {% if outbound_flights %}
+                    {% if trip_type == 'one_way' %}
+                        {% for flight in outbound_flights %}
+                            <div class="flight-card">
+                                <div class="flight-info">
+                                    <div class="flight-route">{{ flight.Source }} to {{ flight.Destination }}</div>
+                                    <div class="flight-time">
+                                        <strong>Departure:</strong> {{ flight.DepartureTime.strftime('%Y-%m-%d %H:%M') }} |
+                                        <strong>Arrival:</strong> {{ flight.ArrivalTime.strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                    <div class="flight-aircraft">
+                                        <strong>Aircraft:</strong> {{ flight.Model }} |
+                                        <strong>Available Seats:</strong> {{ flight.Capacity - flight.BookedSeats }}
+                                    </div>
+                                </div>
+                                <div class="flight-action">
+                                    <div class="price">${{ 100 if flight.BookedSeats < flight.Capacity * 0.5 else 150 }}</div>
+                                    <a href="{{ url_for('book_flight', flight_id=flight.FlightID) }}" class="btn">Book Now</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <!-- For round trips, select outbound flight first -->
+                        <form id="round-trip-form" method="get" action="{{ url_for('select_return_flight') }}">
+                            <input type="hidden" name="source" value="{{ source }}">
+                            <input type="hidden" name="destination" value="{{ destination }}">
+                            <input type="hidden" name="departure_date" value="{{ departure_date }}">
+                            <input type="hidden" name="return_date" value="{{ return_date }}">
+                            
+                            {% for flight in outbound_flights %}
+                                <div class="flight-card">
+                                    <div class="flight-info">
+                                        <div class="flight-route">{{ flight.Source }} to {{ flight.Destination }}</div>
+                                        <div class="flight-time">
+                                            <strong>Departure:</strong> {{ flight.DepartureTime.strftime('%Y-%m-%d %H:%M') }} |
+                                            <strong>Arrival:</strong> {{ flight.ArrivalTime.strftime('%Y-%m-%d %H:%M') }}
+                                        </div>
+                                        <div class="flight-aircraft">
+                                            <strong>Aircraft:</strong> {{ flight.Model }} |
+                                            <strong>Available Seats:</strong> {{ flight.Capacity - flight.BookedSeats }}
+                                        </div>
+                                    </div>
+                                    <div class="flight-action">
+                                        <div class="price">${{ 100 if flight.BookedSeats < flight.Capacity * 0.5 else 150 }}</div>
+                                        <div class="radio-select" style="margin-bottom: 10px;">
+                                            <input type="radio" name="outbound_flight_id" value="{{ flight.FlightID }}" id="flight{{ flight.FlightID }}">
+                                            <label for="flight{{ flight.FlightID }}">Select Flight</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            
+                            <button type="submit" class="flight-selection-btn">Continue to Select Return Flight</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <div class="card">
+                        <div class="card-body">
+                            <p>No outbound flights found for your search criteria. Please try different dates or destinations.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Return Flights (only shown for round trip and when return flights exist) -->
+            {% if trip_type == 'round_trip' and return_flights %}
+                <div id="return-flights" class="flight-results-container">
+                    {% if return_flights %}
+                        {% if selected_outbound %}
+                            <form id="flight-search-form" method="POST" action="{{ url_for('search_flights') }}">
+    <div class="form-group">
+        <label for="source">Source</label>
+        <input type="text" id="source" name="source" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="destination">Destination</label>
+        <input type="text" id="destination" name="destination" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="departure_date">Departure Date</label>
+        <input type="date" id="departure_date" name="departure_date" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="return_date">Return Date</label>
+        <input type="date" id="return_date" name="return_date" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="trip_type">Trip Type</label>
+        <select id="trip_type" name="trip_type" class="form-control">
+            <option value="one_way">One Way</option>
+            <option value="round_trip">Round Trip</option>
+        </select>
+    </div>
+    <button type="submit" class="btn">Search Flights</button>
+</form>
+
+                        {% endif %}
+                    {% else %}
+                        <div class="card">
+                            <div class="card-body">
+                                <p>No return flights found for your search criteria. Please try different dates or destinations.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">SkyWay Airlines</h3>
+                    <p>Your trusted partner for safe and comfortable flights across the globe.</p>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('search_flights') }}">Search Flights</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 class="footer-title">Contact</h3>
+                    <p>Email: info@skyway.com</p>
+                    <p>Phone: +1 234 567 890</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SkyWay Airlines. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Enable/disable return date field based on trip type selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const oneWayRadio = document.getElementById('one_way');
+            const roundTripRadio = document.getElementById('round_trip');
+            const returnDateContainer = document.getElementById('return_date_container');
+            const returnDateInput = document.getElementById('return_date');
+            
+            function updateReturnDateVisibility() {
+                if (roundTripRadio.checked) {
+                    returnDateContainer.style.opacity = '1';
+                    returnDateContainer.style.pointerEvents = 'auto';
+                    returnDateInput.setAttribute('required', 'required');
+                } else {
+                    returnDateContainer.style.opacity = '0.5';
+                    returnDateContainer.style.pointerEvents = 'none';
+                    returnDateInput.removeAttribute('required');
+                }
+            }
+            
+            if (oneWayRadio && roundTripRadio) {
+                oneWayRadio.addEventListener('change', updateReturnDateVisibility);
+                roundTripRadio.addEventListener('change', updateReturnDateVisibility);
+            }
+            
+            // Tab functionality for round trips
+            const tabItems = document.querySelectorAll('.flight-tab-item');
+            tabItems.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabItems.forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    
+                    // Hide all content containers
+                    document.querySelectorAll('.flight-results-container').forEach(container => {
+                        container.classList.remove('active');
+                    });
+                    
+                    // Show the corresponding content
+                    const targetId = tab.getAttribute('data-target') + '-flights';
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+            
+            // Require outbound flight selection before submission
+            const roundTripForm = document.getElementById('round-trip-form');
+            if (roundTripForm) {
+                roundTripForm.addEventListener('submit', function(e) {
+                    const selectedFlight = document.querySelector('input[name="outbound_flight_id"]:checked');
+                    if (!selectedFlight) {
+                        e.preventDefault();
+                        alert('Please select an outbound flight before continuing.');
+                    }
+                });
+            }
+            
+            // Require return flight selection before booking
+            const completeBookingForm = document.getElementById('complete-booking-form');
+            if (completeBookingForm) {
+                completeBookingForm.addEventListener('submit', function(e) {
+                    const selectedFlight = document.querySelector('input[name="return_flight_id"]:checked');
+                    if (!selectedFlight) {
+                        e.preventDefault();
+                        alert('Please select a return flight before booking.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
