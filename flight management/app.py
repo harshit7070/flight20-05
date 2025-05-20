@@ -84,7 +84,20 @@ def login():
                 user = cursor.fetchone()
                 
                 if user and check_password_hash(user['Password'], password):
-                    session['user_id'] = user['User ID']
+                    # Store the user ID using the correct column name from database
+                    # Debug to inspect available keys in user dictionary
+                    print("User record keys:", user.keys())
+                    
+                    # Check which user ID field is present in the database result
+                    if 'UserID' in user:
+                        user_id_field = 'UserID'
+                    elif 'User_ID' in user:
+                        user_id_field = 'User_ID'
+                    else:
+                        # Default assumption
+                        user_id_field = 'UserID'
+                        
+                    session['user_id'] = user[user_id_field]
                     session['name'] = user['Name']
                     session['email'] = user['Email']
                     session['role'] = user['Role']
@@ -97,6 +110,9 @@ def login():
                     flash('Invalid email or password')
             except Error as e:
                 flash(f"Error: {e}")
+            except KeyError as e:
+                # Handle key errors gracefully with useful debugging info
+                flash(f"Database schema issue: {e}. Available fields: {list(user.keys()) if user else 'None'}")
             finally:
                 if connection.is_connected():
                     cursor.close()
